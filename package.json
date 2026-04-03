@@ -1,0 +1,22 @@
+{
+  "name": "sprinklr-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Sprinklr API - Niva Bupa tenant on prod4",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test.mjs"
+  },
+  "keywords": [],
+  "author": "Ajay Gaur",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/express": "^2.0.0-alpha.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.2",
+    "zod": "^4.3.6"
+  }
+}
