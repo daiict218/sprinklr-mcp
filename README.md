@@ -1,108 +1,169 @@
-# Sprinklr MCP Server (Secured)
+# Sprinklr MCP Server
 
-MCP server that gives Claude read-only access to Sprinklr data via the Reporting API. Currently configured for **Niva Bupa tenant on prod4**.
+An open-source [MCP](https://modelcontextprotocol.io/) server that gives AI assistants read-only access to your Sprinklr data. Works with Claude, ChatGPT, Copilot, Cursor, or any MCP-compatible client.
 
-## Security Model
+## Prerequisites
 
-| Layer | What it does |
-|-------|-------------|
-| **OAuth 2.0** | Claude.ai authenticates via standard OAuth flow. Client ID + Secret required. |
-| **Bearer token** | Every MCP request validated. Invalid/expired tokens rejected with 401. |
-| **Read-only enforcement** | PUT/DELETE/PATCH blocked at API client level. POST allowlisted to query endpoints only. |
-| **Rate limiting** | 100 requests/minute per IP. |
-| **Session expiry** | Inactive sessions auto-cleaned after 30 minutes. |
-| **Audit logging** | Every tool call, auth attempt, and blocked request logged with timestamp. |
-| **No credentials in code** | All secrets via environment variables. .env excluded from git. |
+- Node.js 18+
+- Sprinklr account with API access
+- Admin or platform-level role to create developer apps
 
-## Tools (Read-Only)
+## Setup
 
-| Tool | Description |
-|------|-------------|
-| `sprinklr_me` | Get authenticated user profile (connectivity test) |
-| `sprinklr_report` | Execute Reporting API v2 queries using dashboard payloads |
-| `sprinklr_search_cases` | Search CARE cases by text, case number, or status |
-| `sprinklr_raw_api` | GET any Sprinklr v2 endpoint (escape hatch, GET only) |
-| `sprinklr_token_status` | Check authentication status and tenant info |
+### Step 1: Find Your Sprinklr Environment
 
-## Quick Start
+Each Sprinklr instance runs on a specific environment. Your API keys and tokens are tied to that environment and cannot be used across others.
 
-### 1. Install
+1. Log into Sprinklr in your browser
+2. Open browser DevTools (**F12** or right-click > **Inspect**)
+3. Press **Ctrl+F** (Windows) or **Cmd+F** (Mac) to search
+4. Search for `sentry-environment`
+5. The value (e.g., `prod4`) is your environment
 
-```bash
-npm install
+Common environments: `prod`, `prod2`, `prod3`, `prod4`, `prod8`.
+
+**Note:** The `prod` environment has **no path prefix** in API URLs. All others include the environment name in the path.
+
+### Step 2: Create a Sprinklr Developer App
+
+1. Open Sprinklr > **All Settings** > **Manage Customer** > **Developer Apps**
+2. Click **"+ Create App"** and fill in the details
+3. Set the **Callback URL** to `https://www.google.com` (or any URL you control)
+
+Alternatively, use the [Developer Portal](https://dev.sprinklr.com): register, go to **Apps** > **+ New App** > fill in the form.
+
+### Step 3: Generate API Key and Secret
+
+1. In **Developer Apps**, find your app > **three dots** > **"Manage API Key/Token"**
+2. Click **"+ API Key"**
+3. **Copy both the API Key and Secret immediately** --- the Secret is only shown once
+
+If you lose the Secret, you must generate a new pair.
+
+### Step 4: Ensure Required Permissions
+
+The authorizing user needs **Generate Token** and **Generate API v2 Payload** permissions. These are managed in **All Settings > Platform Setup > Governance Console > Workspace/Global Roles**.
+
+### Step 5: Generate OAuth Tokens
+
+#### Step 5a: Get an Authorization Code
+
+Open this URL in your browser (must be logged into Sprinklr):
+
+```
+https://api2.sprinklr.com/{ENV}/oauth/authorize?client_id={YOUR_API_KEY}&response_type=code&redirect_uri=https://www.google.com
 ```
 
-### 2. Configure
+For `prod`, omit `{ENV}/`. The `redirect_uri` must exactly match your app's Callback URL.
+
+The browser redirects to `https://www.google.com/?code=XXXXX`. Copy the `code` value.
+
+**Codes expire in 10 minutes** --- proceed immediately.
+
+#### Step 5b: Exchange the Code for Tokens
 
 ```bash
+curl -s -X POST "https://api2.sprinklr.com/{ENV}/oauth/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id={YOUR_API_KEY}" \
+  -d "client_secret={YOUR_API_SECRET}" \
+  -d "code={YOUR_CODE}" \
+  -d "grant_type=authorization_code" \
+  -d "redirect_uri=https://www.google.com"
+```
+
+Returns `access_token` and `refresh_token`. Save both.
+
+**Alternative:** Generate tokens directly from the Sprinklr UI via **Developer Apps > Your App > Manage API Key/Token > Generate Token**.
+
+### Step 6: Clone and Configure
+
+```bash
+git clone https://github.com/daiict218/sprinklr-mcp.git
+cd sprinklr-mcp
+npm install
 cp .env.example .env
 ```
 
-Fill in all values. Generate MCP_CLIENT_ID and MCP_CLIENT_SECRET:
+Fill in your `.env` with values from the previous steps. See `.env.example` for the template.
+
+### Step 7: Test and Start
 
 ```bash
-node -e "console.log(require('crypto').randomUUID())"
-node -e "console.log(require('crypto').randomUUID())"
+npm test   # verify Sprinklr connectivity
+npm start  # start the server on port 3000
 ```
 
-Use the first output as MCP_CLIENT_ID, second as MCP_CLIENT_SECRET. Save these, you'll need them when adding the connector in Claude.ai.
+Endpoints:
+- **SSE:** `GET /sse` + `POST /messages` (Claude.ai connectors)
+- **Streamable HTTP:** `POST/GET/DELETE /mcp`
+- **Health:** `GET /health`
 
-### 3. Test Sprinklr connectivity
+## Connecting to AI Clients
 
-```bash
-npm test
-```
-
-### 4. Run
-
-```bash
-npm start
-```
-
-### 5. Deploy
-
-Push to GitHub (private repo), deploy to Railway/Render. Set all env vars in the hosting dashboard.
-
-Update `SERVER_URL` in env vars to your deployed URL (e.g., `https://sprinklr-mcp-xxxx.up.railway.app`).
-
-### 6. Connect to Claude.ai
-
-1. Go to **Settings > Connectors**
-2. Click **"Add custom connector"**
-3. Enter your server URL: `https://your-deployed-url.com/mcp`
-4. Click **Advanced Settings**
-5. Enter your **MCP_CLIENT_ID** and **MCP_CLIENT_SECRET**
-6. Click **Add**
-7. Authorize when prompted
-
-Done. Claude can now query Sprinklr data in any conversation.
+| Client | URL |
+|--------|-----|
+| **Claude.ai** | Settings > Connectors > Add custom connector > `https://your-url.com/sse` |
+| **Claude Desktop** | Add `{"mcpServers":{"sprinklr":{"url":"http://localhost:3000/sse"}}}` to `claude_desktop_config.json` |
+| **Cursor / Others** | Point to `/sse` (SSE) or `/mcp` (Streamable HTTP) |
 
 ## Using the Reporting API
 
-1. Open a Sprinklr reporting dashboard in the Niva Bupa tenant
-2. Click three dots on any widget > "Generate API v2 Payload"
+1. Open any Sprinklr reporting dashboard
+2. Click three dots on a widget > **"Generate API v2 Payload"**
 3. Copy the JSON payload
-4. In Claude: "Pull this reporting data: {paste payload}"
+4. Ask your AI assistant: *"Pull this reporting data: {paste payload}"*
 
-## Adding More Read-Only POST Endpoints
+## Deployment
 
-Edit `ALLOWED_POST_ENDPOINTS` in server.mjs:
+Deploy to any Node.js host (Render, Railway, Fly.io). Set all env vars from `.env` and run `npm start`.
+
+For Render free tier, set `SERVER_URL` to your Render URL --- the server self-pings every 14 minutes to prevent spin-down.
+
+## Token Lifecycle
+
+| Token | Expiry | Notes |
+|-------|--------|-------|
+| Authorization code | 10 minutes | One-time use |
+| Access token | ~30 days | Tied to environment |
+| Refresh token | No expiry | **Single-use** --- each refresh invalidates the old one |
+
+The server auto-refreshes on 401, but stores new tokens **in memory only**. If the server restarts, it re-reads from env vars. Update your env vars after a refresh, or re-run the OAuth flow if tokens go stale.
+
+**One token per API key.** If multiple instances share an API key, one refreshing will invalidate the others. Use separate API keys per instance.
+
+## Security
+
+- **Read-only:** PUT/DELETE/PATCH blocked. POST allowlisted to `/reports/query` and `/case/search` only.
+- **Session expiry:** Inactive MCP sessions cleaned after 30 minutes.
+- **No credentials in code:** All secrets via env vars. `.env` is gitignored.
+
+## Adding New Endpoints
+
+Add read-only POST endpoints to `ALLOWED_POST_ENDPOINTS` in `server.mjs`:
 
 ```javascript
-const ALLOWED_POST_ENDPOINTS = [
-  "/reports/query",
-  "/case/search",
-  "/voice/calls/search",  // add new read-only POST endpoints here
-];
+const ALLOWED_POST_ENDPOINTS = ["/reports/query", "/case/search", "/voice/calls/search"];
 ```
 
-## Rate Limits
+## Troubleshooting
 
-- MCP server: 100 requests/minute per IP
-- Sprinklr API: 1,000 calls/hour (contact Success Manager to increase)
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Invalid APIKey/ClientID" (401) | API Key doesn't match environment | Verify key belongs to correct environment bundle |
+| "Unauthorized" (401) | Access token expired | Server auto-refreshes, or re-run OAuth flow |
+| "invalid_grant" | Auth code expired/used/redirect mismatch | Get a fresh code, exchange within 10 minutes |
+| Refresh token fails | Already used (single-use) | Re-run full OAuth flow |
+| "Developer Over Rate" (403) | Hit 1,000 calls/hour limit | Wait, or contact Sprinklr Success Manager |
 
-## Token Management
+## Links
 
-- MCP OAuth tokens: 24-hour expiry, auto-refresh via Claude
-- Sprinklr API tokens: Auto-refresh via refresh_token in .env
-- If Sprinklr token expires and refresh fails, re-run the OAuth flow
+- [Sprinklr Developer Portal](https://dev.sprinklr.com)
+- [OAuth 2.0 Guide](https://dev.sprinklr.com/oauth-2-0-for-customers)
+- [API Key Generation](https://dev.sprinklr.com/api-key-and-secret-generation)
+- [Authorization Troubleshooting](https://dev.sprinklr.com/authorization-troubleshooting)
+- [REST API Error Codes](https://dev.sprinklr.com/rest-api-error-and-status-codes)
+
+## License
+
+ISC
