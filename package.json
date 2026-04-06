@@ -1,14 +1,39 @@
 {
   "name": "sprinklr-mcp",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Open-source MCP server for Sprinklr API",
   "type": "module",
   "main": "server.mjs",
+  "bin": {
+    "sprinklr-mcp": "./server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "README.md",
+    ".env.example"
+  ],
   "scripts": {
     "start": "node server.mjs",
     "test": "node test.mjs"
   },
-  "keywords": [],
+  "keywords": [
+    "mcp",
+    "sprinklr",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "chatgpt",
+    "copilot",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/daiict218/sprinklr-mcp.git"
+  },
+  "homepage": "https://github.com/daiict218/sprinklr-mcp",
+  "engines": {
+    "node": ">=18"
+  },
   "author": "Ajay Gaur",
   "license": "ISC",
   "dependencies": {

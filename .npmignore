@@ -1,0 +1,4 @@
+.env
+.claude/
+test.mjs
+.DS_Store
