@@ -4,6 +4,18 @@ An open-source [MCP](https://modelcontextprotocol.io/) server that gives AI assi
 
 **How it works:** You deploy this server with your Sprinklr API credentials. Your AI assistant connects to it via MCP and can query reports, search cases, and call any read-only Sprinklr API endpoint --- using your existing permissions. No new access surface, no data leaves your infrastructure.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [What You Can Do](#what-you-can-do)
+- [Deployment](#deployment)
+- [Full Setup Guide](#full-setup-guide)
+- [Token Lifecycle](#token-lifecycle)
+- [Security](#security)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Links](#links)
+
 ## Quick Start
 
 ```bash
