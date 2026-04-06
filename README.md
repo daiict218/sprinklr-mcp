@@ -153,6 +153,12 @@ The intended deployment model keeps all sensitive data within the customer's own
 
 Sprinklr publishes the open-source connector code. Customers deploy, authenticate, and run it themselves. Zero infrastructure or AI cost on Sprinklr's side.
 
+### Important: No Built-in Authentication
+
+This server does not authenticate incoming MCP client connections. Anyone who can reach the server URL can invoke all tools using the configured Sprinklr credentials. This is by design for simplicity --- the server is intended to run on **private networks, localhost, or behind a reverse proxy with authentication**.
+
+**Do not expose this server to the public internet without adding an authentication layer** (e.g., reverse proxy with OAuth, VPN, or firewall rules).
+
 ### Protections
 
 - **Read-only enforcement:** PUT, DELETE, and PATCH are blocked at the API client level. POST is allowlisted only for `/reports/query` and `/case/search`.
@@ -160,6 +166,8 @@ Sprinklr publishes the open-source connector code. Customers deploy, authenticat
 - **Session expiry:** Inactive MCP sessions are cleaned up after 30 minutes.
 - **No credentials in code:** All secrets are loaded from environment variables. `.env` is gitignored.
 - **Token auto-refresh:** On 401 responses, the server refreshes the access token and stores the new refresh token for subsequent rotations.
+- **Sanitized errors:** Sprinklr API error details are logged server-side only. Clients receive only the HTTP status code, not internal response bodies.
+- **`sprinklr_raw_api` scope:** This tool allows GET requests to any Sprinklr v2 endpoint. Access is intentionally broad to support diverse use cases. The Sprinklr token's own permission scope limits what data is accessible.
 
 ### Token Storage
 

@@ -91,7 +91,8 @@ async function sprinklrFetch(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Sprinklr API ${response.status}: ${errorText}`);
+    log("Sprinklr API error", { status: response.status, body: errorText });
+    throw new Error(`Sprinklr API returned HTTP ${response.status}`);
   }
   return response.json();
 }
@@ -120,7 +121,7 @@ async function refreshAccessToken() {
 // =====================================================================
 
 function createSprinklrMcpServer() {
-  const server = new McpServer({ name: "sprinklr-niva-bupa", version: "1.0.0" });
+  const server = new McpServer({ name: "sprinklr-mcp", version: "1.0.0" });
 
   server.tool("sprinklr_me", "Get authenticated user profile from Sprinklr. Verifies connectivity.", {}, async () => {
     log("Tool: sprinklr_me");
@@ -172,8 +173,8 @@ function createSprinklrMcpServer() {
     }
   });
 
-  server.tool("sprinklr_raw_api", "Read-only GET to any Sprinklr v2 endpoint.", {
-    endpoint: z.string().describe("API path e.g. '/campaign/list'. GET only."),
+  server.tool("sprinklr_raw_api", "Read-only GET to any Sprinklr v2 endpoint. Access is scoped by the Sprinklr token's permissions.", {
+    endpoint: z.string().describe("API path e.g. '/campaign/list'. GET only. Must start with '/'."),
   }, async ({ endpoint }) => {
     log("Tool: sprinklr_raw_api", { endpoint });
     try {
@@ -376,7 +377,7 @@ app.listen(PORT, "0.0.0.0", () => {
   log(`Streamable HTTP: POST/GET/DELETE /mcp`);
   log(`SSE: GET /sse + POST /messages`);
   log(`Health: GET /health`);
-  log(`Auth: None`);
+  log(`Auth: None (deploy behind a reverse proxy or on a private network)`);
   log(`Read-only: Yes`);
   log("===================================");
 });
