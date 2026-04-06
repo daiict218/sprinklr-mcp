@@ -224,7 +224,7 @@ Contributions are welcome. Please open an issue first to discuss what you'd like
 **Guidelines:**
 - Keep changes focused --- one concern per PR
 - Follow the existing code style (ES modules, arrow functions)
-- Security-sensitive changes will be reviewed before merge
+- All PRs are reviewed before merge
 - All PRs must target `main` --- direct pushes are blocked
 
 **Adding new read-only endpoints:** Add the POST path to `ALLOWED_POST_ENDPOINTS` in `server.mjs`. GET endpoints work automatically via `sprinklr_raw_api`.
