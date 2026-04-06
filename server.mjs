@@ -202,9 +202,14 @@ function createSprinklrMcpServer() {
 // =====================================================================
 
 const app = createMcpExpressApp({ host: "0.0.0.0" });
+app.set("trust proxy", 1);
 
-// --- Security headers ---
-app.use(helmet());
+// --- Security headers (tuned for API server, not browser app) ---
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+}));
 
 // --- Rate limiting ---
 const globalLimiter = rateLimit({
@@ -226,6 +231,7 @@ const mcpLimiter = rateLimit({
 app.use(globalLimiter);
 app.use("/mcp", mcpLimiter);
 app.use("/messages", mcpLimiter);
+app.use("/sse", mcpLimiter);
 
 // Log EVERY incoming request for debugging
 app.use((req, res, next) => {
