@@ -5,6 +5,8 @@ import { createMcpExpressApp } from "@modelcontextprotocol/express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
@@ -22,6 +24,15 @@ const SERVER_URL = process.env.SERVER_URL || "";
 if (!API_KEY || !ACCESS_TOKEN) {
   console.error("ERROR: SPRINKLR_API_KEY and SPRINKLR_ACCESS_TOKEN required");
   process.exit(1);
+}
+
+if (REFRESH_TOKEN && !API_SECRET) {
+  console.error("ERROR: SPRINKLR_API_SECRET is required when SPRINKLR_REFRESH_TOKEN is set (needed for token refresh)");
+  process.exit(1);
+}
+
+if (!REFRESH_TOKEN) {
+  console.warn("WARN: SPRINKLR_REFRESH_TOKEN not set — token auto-refresh is disabled. Server will stop working when the access token expires.");
 }
 
 // =====================================================================
@@ -191,6 +202,36 @@ function createSprinklrMcpServer() {
 // =====================================================================
 
 const app = createMcpExpressApp({ host: "0.0.0.0" });
+app.set("trust proxy", 1);
+
+// --- Security headers (tuned for API server, not browser app) ---
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false,
+}));
+
+// --- Rate limiting ---
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 min per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+
+const mcpLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many MCP requests, please try again later." },
+});
+
+app.use(globalLimiter);
+app.use("/mcp", mcpLimiter);
+app.use("/messages", mcpLimiter);
+app.use("/sse", mcpLimiter);
 
 // Log EVERY incoming request for debugging
 app.use((req, res, next) => {
@@ -266,11 +307,22 @@ app.delete("/mcp", async (req, res) => {
 // --- SSE transport (fallback for Claude.ai compatibility) ---
 const sseTransports = {};
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [sid, transport] of Object.entries(sseTransports)) {
+    if (transport._lastActivity && now > transport._lastActivity + 30 * 60 * 1000) {
+      transport.close?.();
+      delete sseTransports[sid];
+    }
+  }
+}, 60000);
+
 app.get("/sse", async (req, res) => {
   try {
     log("SSE connection requested");
     const transport = new SSEServerTransport("/messages", res);
     const server = createSprinklrMcpServer();
+    transport._lastActivity = Date.now();
     sseTransports[transport.sessionId] = transport;
     transport.onclose = () => { delete sseTransports[transport.sessionId]; };
     await server.connect(transport);
@@ -287,6 +339,7 @@ app.post("/messages", async (req, res) => {
     log("SSE message received", { sessionId });
     const transport = sseTransports[sessionId];
     if (transport) {
+      transport._lastActivity = Date.now();
       await transport.handlePostMessage(req, res, req.body);
     } else {
       res.status(404).json({ error: "SSE session not found" });
