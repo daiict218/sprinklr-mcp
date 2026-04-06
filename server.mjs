@@ -91,7 +91,8 @@ async function sprinklrFetch(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Sprinklr API ${response.status}: ${errorText}`);
+    log("Sprinklr API error", { status: response.status, body: errorText });
+    throw new Error(`Sprinklr API returned HTTP ${response.status}`);
   }
   return response.json();
 }
@@ -172,8 +173,8 @@ function createSprinklrMcpServer() {
     }
   });
 
-  server.tool("sprinklr_raw_api", "Read-only GET to any Sprinklr v2 endpoint.", {
-    endpoint: z.string().describe("API path e.g. '/campaign/list'. GET only."),
+  server.tool("sprinklr_raw_api", "Read-only GET to any Sprinklr v2 endpoint. Access is scoped by the Sprinklr token's permissions.", {
+    endpoint: z.string().describe("API path e.g. '/campaign/list'. GET only. Must start with '/'."),
   }, async ({ endpoint }) => {
     log("Tool: sprinklr_raw_api", { endpoint });
     try {

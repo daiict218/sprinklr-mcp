@@ -17,9 +17,8 @@ const required = {
 
 let allPresent = true;
 for (const [name, val] of Object.entries(required)) {
-  const status = val ? `${val.slice(0, 8)}...` : "MISSING";
   const icon = val ? "OK" : "FAIL";
-  console.log(`  [${icon}] ${name}: ${status}`);
+  console.log(`  [${icon}] ${name}: ${val ? "SET" : "MISSING"}`);
   if (!val) allPresent = false;
 }
 
@@ -30,9 +29,8 @@ const optional = {
 };
 
 for (const [name, val] of Object.entries(optional)) {
-  const status = val ? `${val.slice(0, 8)}...` : "NOT SET (token refresh will not work)";
   const icon = val ? "OK" : "WARN";
-  console.log(`  [${icon}] ${name}: ${status}`);
+  console.log(`  [${icon}] ${name}: ${val ? "SET" : "NOT SET (token refresh will not work)"}`);
 }
 
 if (!allPresent) {
