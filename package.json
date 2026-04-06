@@ -1,7 +1,7 @@
 {
   "name": "sprinklr-mcp",
   "version": "1.0.0",
-  "description": "MCP server for Sprinklr API - Niva Bupa tenant on prod4",
+  "description": "Open-source MCP server for Sprinklr API",
   "type": "module",
   "main": "server.mjs",
   "scripts": {

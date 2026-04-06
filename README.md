@@ -153,6 +153,12 @@ The intended deployment model keeps all sensitive data within the customer's own
 
 Sprinklr publishes the open-source connector code. Customers deploy, authenticate, and run it themselves. Zero infrastructure or AI cost on Sprinklr's side.
 
+### Important: No Built-in Authentication
+
+This server does not authenticate incoming MCP client connections. Anyone who can reach the server URL can invoke all tools using the configured Sprinklr credentials. This is by design for simplicity --- the server is intended to run on **private networks, localhost, or behind a reverse proxy with authentication**.
+
+**Do not expose this server to the public internet without adding an authentication layer** (e.g., reverse proxy with OAuth, VPN, or firewall rules).
+
 ### Protections
 
 - **Read-only enforcement:** PUT, DELETE, and PATCH are blocked at the API client level. POST is allowlisted only for `/reports/query` and `/case/search`.

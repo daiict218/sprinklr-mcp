@@ -120,7 +120,7 @@ async function refreshAccessToken() {
 // =====================================================================
 
 function createSprinklrMcpServer() {
-  const server = new McpServer({ name: "sprinklr-niva-bupa", version: "1.0.0" });
+  const server = new McpServer({ name: "sprinklr-mcp", version: "1.0.0" });
 
   server.tool("sprinklr_me", "Get authenticated user profile from Sprinklr. Verifies connectivity.", {}, async () => {
     log("Tool: sprinklr_me");
@@ -376,7 +376,7 @@ app.listen(PORT, "0.0.0.0", () => {
   log(`Streamable HTTP: POST/GET/DELETE /mcp`);
   log(`SSE: GET /sse + POST /messages`);
   log(`Health: GET /health`);
-  log(`Auth: None`);
+  log(`Auth: None (deploy behind a reverse proxy or on a private network)`);
   log(`Read-only: Yes`);
   log("===================================");
 });
