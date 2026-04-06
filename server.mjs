@@ -14,7 +14,7 @@ const SPRINKLR_OAUTH_URL = `https://api2.sprinklr.com/${SPRINKLR_ENV}/oauth`;
 const API_KEY = process.env.SPRINKLR_API_KEY;
 const API_SECRET = process.env.SPRINKLR_API_SECRET;
 let ACCESS_TOKEN = process.env.SPRINKLR_ACCESS_TOKEN;
-const REFRESH_TOKEN = process.env.SPRINKLR_REFRESH_TOKEN;
+let REFRESH_TOKEN = process.env.SPRINKLR_REFRESH_TOKEN;
 const REDIRECT_URI = process.env.SPRINKLR_REDIRECT_URI || "https://www.google.com";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const SERVER_URL = process.env.SERVER_URL || "";
@@ -54,6 +54,13 @@ function isReadOnlyRequest(method, endpoint) {
 async function sprinklrFetch(endpoint, options = {}) {
   const { method = "GET", body = null, retried = false } = options;
 
+  if (!endpoint.startsWith("/")) {
+    throw new Error(`BLOCKED: endpoint must start with '/'. Got: ${endpoint}`);
+  }
+  if (endpoint.includes("://") || endpoint.includes("..")) {
+    throw new Error(`BLOCKED: endpoint contains forbidden sequence. Got: ${endpoint}`);
+  }
+
   if (!isReadOnlyRequest(method, endpoint)) {
     throw new Error(`BLOCKED: ${method} ${endpoint} not permitted.`);
   }
@@ -62,7 +69,7 @@ async function sprinklrFetch(endpoint, options = {}) {
   const fetchOptions = { method, headers };
   if (body) fetchOptions.body = JSON.stringify(body);
 
-  const url = endpoint.startsWith("http") ? endpoint : `${SPRINKLR_BASE_URL}${endpoint}`;
+  const url = `${SPRINKLR_BASE_URL}${endpoint}`;
   const response = await fetch(url, fetchOptions);
 
   if (response.status === 401 && !retried && REFRESH_TOKEN) {
@@ -91,6 +98,7 @@ async function refreshAccessToken() {
     if (!response.ok) return false;
     const data = await response.json();
     ACCESS_TOKEN = data.access_token;
+    if (data.refresh_token) REFRESH_TOKEN = data.refresh_token;
     log("Sprinklr token refreshed");
     return true;
   } catch { return false; }

@@ -134,9 +134,38 @@ The server auto-refreshes on 401, but stores new tokens **in memory only**. If t
 
 ## Security
 
-- **Read-only:** PUT/DELETE/PATCH blocked. POST allowlisted to `/reports/query` and `/case/search` only.
-- **Session expiry:** Inactive MCP sessions cleaned after 30 minutes.
-- **No credentials in code:** All secrets via env vars. `.env` is gitignored.
+### Architecture
+
+This MCP server is built entirely on top of Sprinklr's existing public REST APIs. It does not create any new access surface, bypass any Sprinklr access controls, or touch internal systems. Every request goes through Sprinklr's standard API gateway with the same authentication, authorization, and rate limiting that applies to any direct API consumer.
+
+Because of this:
+
+- **No Sprinklr security review required.** This is equivalent to a customer using Sprinklr APIs directly --- same endpoints, same credentials, same access controls.
+- **Customer security teams should review.** As with any API integration, the deploying organization should review the connector as part of their standard security process.
+
+### Deployment Model
+
+The intended deployment model keeps all sensitive data within the customer's own infrastructure:
+
+1. **Customer deploys the server** on their own infrastructure (Render, Railway, AWS, on-prem).
+2. **Customer authenticates with their own Sprinklr credentials.** No credentials are shared with or stored by Sprinklr.
+3. **LLM costs sit with the customer** --- they use their own Claude, ChatGPT, or Copilot subscription.
+
+Sprinklr publishes the open-source connector code. Customers deploy, authenticate, and run it themselves. Zero infrastructure or AI cost on Sprinklr's side.
+
+### Protections
+
+- **Read-only enforcement:** PUT, DELETE, and PATCH are blocked at the API client level. POST is allowlisted only for `/reports/query` and `/case/search`.
+- **SSRF prevention:** All endpoints must start with `/` and are validated against protocol injection (`://`) and path traversal (`..`). Requests always target the configured Sprinklr API domain.
+- **Session expiry:** Inactive MCP sessions are cleaned up after 30 minutes.
+- **No credentials in code:** All secrets are loaded from environment variables. `.env` is gitignored.
+- **Token auto-refresh:** On 401 responses, the server refreshes the access token and stores the new refresh token for subsequent rotations.
+
+### Token Storage
+
+Tokens are stored **in memory only**. This is a deliberate design choice --- it avoids writing credentials to disk and keeps the attack surface minimal. The tradeoff: if the server restarts, it falls back to the tokens in your environment variables. Update your env vars after a refresh if needed, or re-run the OAuth flow.
+
+See [Token Lifecycle](#token-lifecycle) for details on expiry and single-use refresh tokens.
 
 ## Adding New Endpoints
 
