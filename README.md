@@ -1,14 +1,61 @@
 # Sprinklr MCP Server
 
-An open-source [MCP](https://modelcontextprotocol.io/) server that gives AI assistants read-only access to your Sprinklr data. Works with Claude, ChatGPT, Copilot, Cursor, or any MCP-compatible client.
+An open-source [MCP](https://modelcontextprotocol.io/) server that gives AI assistants **read-only** access to your Sprinklr data. Works with Claude, ChatGPT, Copilot, Cursor, or any MCP-compatible client.
 
-## Prerequisites
+**How it works:** You deploy this server with your Sprinklr API credentials. Your AI assistant connects to it via MCP and can query reports, search cases, and call any read-only Sprinklr API endpoint --- using your existing permissions. No new access surface, no data leaves your infrastructure.
+
+## Quick Start
+
+```bash
+git clone https://github.com/daiict218/sprinklr-mcp.git
+cd sprinklr-mcp
+npm install
+cp .env.example .env        # fill in your Sprinklr credentials
+npm test                     # verify connectivity
+npm start                    # server runs on port 3000
+```
+
+Then connect your AI client:
+
+| Client | How |
+|--------|-----|
+| **Claude.ai** | Settings > Connectors > Add custom connector > `https://your-url/sse` |
+| **Claude Desktop** | Add to config: `{"mcpServers":{"sprinklr":{"url":"http://localhost:3000/sse"}}}` |
+| **Cursor / Others** | Point to `/sse` (SSE) or `/mcp` (Streamable HTTP) |
+
+**Need Sprinklr API credentials?** See [Full Setup Guide](#full-setup-guide) below.
+
+## What You Can Do
+
+| Tool | Description |
+|------|-------------|
+| `sprinklr_report` | Run any reporting dashboard query via API v2 payload |
+| `sprinklr_search_cases` | Search CARE tickets by text, case number, or status |
+| `sprinklr_raw_api` | GET any Sprinklr v2 endpoint (scoped by your token's permissions) |
+| `sprinklr_me` | Check authenticated user profile / verify connectivity |
+| `sprinklr_token_status` | Check connection status and tenant info |
+
+**Example:** Open a Sprinklr dashboard > click three dots on a widget > **"Generate API v2 Payload"** > copy the JSON > ask your AI assistant: *"Pull this reporting data: {paste payload}"*
+
+## Deployment
+
+Deploy to any Node.js host (Render, Railway, Fly.io, AWS, on-prem). Set all env vars from `.env` and run `npm start`.
+
+For Render free tier, set `SERVER_URL` to your Render URL --- the server self-pings every 14 minutes to prevent spin-down.
+
+**Cost model:** You deploy, you authenticate, you pay for your own LLM subscription. Zero cost on Sprinklr's side.
+
+**Note:** This server has no built-in auth --- deploy on a private network or behind a reverse proxy. See [Security](#security).
+
+---
+
+## Full Setup Guide
+
+### Prerequisites
 
 - Node.js 18+
 - Sprinklr account with API access
 - Admin or platform-level role to create developer apps
-
-## Setup
 
 ### Step 1: Find Your Sprinklr Environment
 
@@ -99,27 +146,6 @@ Endpoints:
 - **Streamable HTTP:** `POST/GET/DELETE /mcp`
 - **Health:** `GET /health`
 
-## Connecting to AI Clients
-
-| Client | URL |
-|--------|-----|
-| **Claude.ai** | Settings > Connectors > Add custom connector > `https://your-url.com/sse` |
-| **Claude Desktop** | Add `{"mcpServers":{"sprinklr":{"url":"http://localhost:3000/sse"}}}` to `claude_desktop_config.json` |
-| **Cursor / Others** | Point to `/sse` (SSE) or `/mcp` (Streamable HTTP) |
-
-## Using the Reporting API
-
-1. Open any Sprinklr reporting dashboard
-2. Click three dots on a widget > **"Generate API v2 Payload"**
-3. Copy the JSON payload
-4. Ask your AI assistant: *"Pull this reporting data: {paste payload}"*
-
-## Deployment
-
-Deploy to any Node.js host (Render, Railway, Fly.io). Set all env vars from `.env` and run `npm start`.
-
-For Render free tier, set `SERVER_URL` to your Render URL --- the server self-pings every 14 minutes to prevent spin-down.
-
 ## Token Lifecycle
 
 | Token | Expiry | Notes |
@@ -175,14 +201,6 @@ Tokens are stored **in memory only**. This is a deliberate design choice --- it 
 
 See [Token Lifecycle](#token-lifecycle) for details on expiry and single-use refresh tokens.
 
-## Adding New Endpoints
-
-Add read-only POST endpoints to `ALLOWED_POST_ENDPOINTS` in `server.mjs`:
-
-```javascript
-const ALLOWED_POST_ENDPOINTS = ["/reports/query", "/case/search", "/voice/calls/search"];
-```
-
 ## Troubleshooting
 
 | Error | Cause | Fix |
@@ -192,6 +210,24 @@ const ALLOWED_POST_ENDPOINTS = ["/reports/query", "/case/search", "/voice/calls/
 | "invalid_grant" | Auth code expired/used/redirect mismatch | Get a fresh code, exchange within 10 minutes |
 | Refresh token fails | Already used (single-use) | Re-run full OAuth flow |
 | "Developer Over Rate" (403) | Hit 1,000 calls/hour limit | Wait, or contact Sprinklr Success Manager |
+
+## Contributing
+
+Contributions are welcome. Please open an issue first to discuss what you'd like to change.
+
+1. Fork the repo
+2. Create a branch (`git checkout -b feature/your-feature`)
+3. Make your changes
+4. Test locally (`npm test && npm start`)
+5. Open a PR against `main`
+
+**Guidelines:**
+- Keep changes focused --- one concern per PR
+- Follow the existing code style (ES modules, arrow functions)
+- All PRs are reviewed before merge
+- All PRs must target `main` --- direct pushes are blocked
+
+**Adding new read-only endpoints:** Add the POST path to `ALLOWED_POST_ENDPOINTS` in `server.mjs`. GET endpoints work automatically via `sprinklr_raw_api`.
 
 ## Links
 
