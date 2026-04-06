@@ -18,6 +18,22 @@ An open-source [MCP](https://modelcontextprotocol.io/) server that gives AI assi
 
 ## Quick Start
 
+### Option A: npm package (fastest)
+
+```bash
+npm install -g sprinklr-mcp
+```
+
+Create a `.env` file in your working directory with your Sprinklr credentials (see [`.env.example`](.env.example) for the template), then run:
+
+```bash
+sprinklr-mcp
+```
+
+> **Do not pass credentials as inline environment variables.** They will be saved in your shell history.
+
+### Option B: Clone and configure
+
 ```bash
 git clone https://github.com/daiict218/sprinklr-mcp.git
 cd sprinklr-mcp

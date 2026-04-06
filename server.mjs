@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
@@ -121,7 +122,7 @@ async function refreshAccessToken() {
 // =====================================================================
 
 function createSprinklrMcpServer() {
-  const server = new McpServer({ name: "sprinklr-mcp", version: "1.0.0" });
+  const server = new McpServer({ name: "sprinklr-mcp", version: "0.1.0" });
 
   server.tool("sprinklr_me", "Get authenticated user profile from Sprinklr. Verifies connectivity.", {}, async () => {
     log("Tool: sprinklr_me");
@@ -153,7 +154,7 @@ function createSprinklrMcpServer() {
 
   server.tool("sprinklr_search_cases", "Search CARE tickets in Sprinklr. Read-only.", {
     query: z.string().optional().describe("Free text search"),
-    case_number: z.string().optional().describe("Case number e.g. CARE-96832"),
+    case_number: z.string().regex(/^[A-Za-z]+-\d+$/).optional().describe("Case number e.g. CARE-96832"),
     status: z.string().optional().describe("OPEN, IN_PROGRESS, CLOSED"),
     page_size: z.number().optional().describe("Results. Default 20."),
   }, async ({ query, case_number, status, page_size }) => {
@@ -353,7 +354,7 @@ app.post("/messages", async (req, res) => {
 
 // --- Health ---
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", server: "sprinklr-mcp", version: "1.0.0", read_only: true, transports: ["streamable-http", "sse"] });
+  res.json({ status: "ok", server: "sprinklr-mcp", version: "0.1.0", read_only: true, transports: ["streamable-http", "sse"] });
 });
 
 app.use((req, res) => {
