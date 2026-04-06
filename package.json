@@ -9,6 +9,7 @@
   },
   "files": [
     "server.mjs",
+    "src/",
     "README.md",
     ".env.example"
   ],
